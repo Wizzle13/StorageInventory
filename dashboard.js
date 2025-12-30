@@ -1,18 +1,58 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const usernameDisplay = document.getElementById('usernameDisplay');
-    const logoutButton = document.getElementById('logoutButton');
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'index.html';
+    }
 
-    // A simple way to get the username from the URL query string for this example
-    const urlParams = new URLSearchParams(window.location.search);
-    const username = urlParams.get('username');
+    const nameDisplay = document.getElementById('nameDisplay');
+    const emailDisplay = document.getElementById('emailDisplay');
+    const logoutButton = document.getElementById('logoutButton');
+    const menuToggle = document.querySelector('.menu-toggle');
+    const menuItems = document.querySelector('.menu-items');
+
+    // Toggle menu on button click
+    if (menuToggle && menuItems) {
+        menuToggle.addEventListener('click', function(event) {
+            event.stopPropagation(); // Prevent click from bubbling to the document
+            menuItems.classList.toggle('active');
+        });
+    }
+
+    // Close menu when clicking outside
+    document.addEventListener('click', function(event) {
+        if (menuItems && menuItems.classList.contains('active')) {
+            if (!menuItems.contains(event.target) && !menuToggle.contains(event.target)) {
+                menuItems.classList.remove('active');
+            }
+        }
+    });
+
+    const username = localStorage.getItem('username');
 
     if (username) {
-        usernameDisplay.textContent = username;
+        fetch(`http://localhost:3000/get-user-by-username`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    nameDisplay.textContent = data.name;
+                    emailDisplay.textContent = data.email;
+                } else {
+                    console.error('Error fetching user data:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
     }
 
     if (logoutButton) {
         logoutButton.addEventListener('click', function() {
-            // In a real app, you'd also clear server-side sessions.
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
             alert('Logging out...');
             window.location.href = 'index.html';
         });

@@ -7,10 +7,23 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <header class="dashboard-header">
+        <div class="welcome-message">
+            <h2>Welcome, <span id="nameDisplay">Name</span>!</h2>
+        </div>
+        <nav class="hamburger-menu">
+            <button class="menu-toggle" aria-label="Open menu">☰</button>
+            <ul class="menu-items">
+                <li><a href="add-location.html">Location</a></li>
+                <li><a href="add-container.html">Container</a></li>
+                <li><a href="#">Item</a></li>
+                <li><button id="logoutButton">Logout</button></li>
+            </ul>
+        </nav>
+    </header>
     <div class="dashboard-container">
-        <h2>Welcome, <span id="usernameDisplay">User</span>!</h2>
+        <p>Email: <span id="emailDisplay"></span></p>
         <p>This is your storage inventory dashboard.</p>
-        <button id="logoutButton">Logout</button>
     </div>
     <script src="dashboard.js"></script>
 </body>

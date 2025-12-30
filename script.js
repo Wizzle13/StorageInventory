@@ -24,7 +24,9 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     alert('Login successful! Redirecting to dashboard.');
-                    window.location.href = `dashboard.html?username=${encodeURIComponent(username)}`;
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('username', username);
+                    window.location.href = 'dashboard.html';
                 } else {
                     alert(`Error: ${data.message}`);
                 }

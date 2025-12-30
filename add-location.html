@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Location - Storage Inventory</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h2>Add a New Location</h2>
+        <form id="addLocationForm">
+            <div class="input-group">
+                <label for="locationName">Location Name (Required)</label>
+                <input type="text" id="locationName" name="locationName" required>
+            </div>
+            <div class="input-group">
+                <label for="locationDescription">Brief Description</label>
+                <textarea id="locationDescription" name="locationDescription" rows="4"></textarea>
+            </div>
+            <div class="input-group">
+                <label for="locationPicture">Upload a Picture</label>
+                <input type="file" id="locationPicture" name="locationPicture" accept="image/*">
+            </div>
+            <button type="submit">Add Location</button>
+        </form>
+
+        <h2>Existing Locations</h2>
+        <table class="locations-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Picture</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="locationsTableBody">
+                <!-- Location data will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+    <script src="add-location.js"></script>
+</body>
+</html>

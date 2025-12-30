@@ -17,10 +17,12 @@ beforeAll(async () => {
     const server = await main();
     app = server.app;
     db = server.db;
-    // Ensure test user and locations are clean before tests
-    await db.execute('DELETE FROM users WHERE username = ?', [testUser.username]);
-    await db.execute('DELETE FROM locations WHERE name = ?', ['Test Location']);
-    await db.execute('DELETE FROM locations WHERE name = ?', ['Another Test Location']);
+    // Drop tables to ensure fresh schema
+    await db.execute('DROP TABLE IF EXISTS containers');
+    await db.execute('DROP TABLE IF EXISTS locations');
+    await db.execute('DROP TABLE IF EXISTS users');
+    // Re-initialize tables
+    await main();
 
     // Create a dummy image file for upload tests
     const uploadsDir = path.join(__dirname, 'uploads');
@@ -95,6 +97,7 @@ describe('User Authentication API', () => {
         expect(response.status).toBe(200);
         expect(response.body.success).toBe(true);
         expect(response.body.message).toBe('Login successful');
+        expect(response.body).toHaveProperty('token');
 
         // Clean up
         await db.execute('DELETE FROM users WHERE username = ?', [testUser.username]);
@@ -134,10 +137,27 @@ describe('User Authentication API', () => {
 });
 
 describe('Location API', () => {
+    let token;
+    let userId;
+
+    beforeAll(async () => {
+        // Create user and login to get token
+        await request(app).post('/create-user').send(testUser);
+        const response = await request(app)
+            .post('/login')
+            .send({
+                username: testUser.username,
+                password: testUser.password
+            });
+        token = response.body.token;
+        const [rows] = await db.execute('SELECT id FROM users WHERE username = ?', [testUser.username]);
+        userId = rows[0].id;
+    });
 
     it('should add a new location without a picture successfully', async () => {
         const response = await request(app)
             .post('/add-location')
+            .set('Authorization', `Bearer ${token}`)
             .send({
                 name: 'Test Location',
                 description: 'A test description'
@@ -151,11 +171,13 @@ describe('Location API', () => {
         expect(rows.length).toBe(1);
         expect(rows[0].description).toBe('A test description');
         expect(rows[0].picture_path).toBeNull();
+        expect(rows[0].user_id).toBe(userId);
     });
 
     it('should add a new location with a picture successfully', async () => {
         const response = await request(app)
             .post('/add-location')
+            .set('Authorization', `Bearer ${token}`)
             .attach('picture', tempImagePath)
             .field('name', 'Another Test Location')
             .field('description', 'Another test description');
@@ -168,6 +190,7 @@ describe('Location API', () => {
         expect(rows.length).toBe(1);
         expect(rows[0].description).toBe('Another test description');
         expect(rows[0].picture_path).not.toBeNull();
+        expect(rows[0].user_id).toBe(userId);
         expect(fs.existsSync(path.join(__dirname, rows[0].picture_path))).toBe(true);
 
         // Clean up the uploaded picture
@@ -179,6 +202,7 @@ describe('Location API', () => {
     it('should return 400 if location name is missing', async () => {
         const response = await request(app)
             .post('/add-location')
+            .set('Authorization', `Bearer ${token}`)
             .send({
                 description: 'Description without name'
             });
@@ -188,21 +212,123 @@ describe('Location API', () => {
         expect(response.body.message).toBe('Location name is required');
     });
 
-    it('should retrieve all locations', async () => {
+    it('should retrieve all locations for the user', async () => {
         // Add a location first to ensure there's data
         await request(app)
             .post('/add-location')
+            .set('Authorization', `Bearer ${token}`)
             .send({ name: 'Location for Retrieval', description: 'Description' });
         
         const response = await request(app)
-            .get('/get-locations');
+            .get('/get-locations')
+            .set('Authorization', `Bearer ${token}`);
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBe(true);
         expect(response.body.locations).toBeInstanceOf(Array);
         expect(response.body.locations.length).toBeGreaterThanOrEqual(1);
         expect(response.body.locations.some(loc => loc.name === 'Location for Retrieval')).toBe(true);
+    });
+});
 
-        await db.execute('DELETE FROM locations WHERE name = ?', ['Location for Retrieval']);
+const testUser2 = {
+    name: 'Test User 2',
+    email: 'test2@example.com',
+    username: 'testuser2',
+    password: 'password123'
+};
+
+describe('Container API', () => {
+    let token;
+    let userId;
+    let locationId;
+
+    beforeAll(async () => {
+        // Create user and login to get token
+        await request(app).post('/create-user').send(testUser2);
+        const response = await request(app)
+            .post('/login')
+            .send({
+                username: testUser2.username,
+                password: testUser2.password
+            });
+        token = response.body.token;
+        const [userRows] = await db.execute('SELECT id FROM users WHERE username = ?', [testUser2.username]);
+        userId = userRows[0].id;
+
+        // Create a location to be used in tests
+        await request(app)
+            .post('/add-location')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ name: 'Test Location for Containers', description: 'A test description' });
+        const [locationRows] = await db.execute('SELECT id FROM locations WHERE name = ?', ['Test Location for Containers']);
+        locationId = locationRows[0].id;
+    });
+
+    afterAll(async () => {
+        await db.execute('DELETE FROM users WHERE username = ?', [testUser2.username]);
+    });
+
+
+    it('should add a new container without a picture successfully', async () => {
+        const response = await request(app)
+            .post('/add-container')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                name: 'Test Container',
+                description: 'A test description',
+                location_id: locationId
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.message).toBe('Container added successfully');
+
+        const [rows] = await db.execute('SELECT * FROM containers WHERE name = ?', ['Test Container']);
+        expect(rows.length).toBe(1);
+        expect(rows[0].description).toBe('A test description');
+        expect(rows[0].picture_path).toBeNull();
+        expect(rows[0].user_id).toBe(userId);
+        expect(rows[0].location_id).toBe(locationId);
+    });
+
+    it('should add a new container with a picture successfully', async () => {
+        const response = await request(app)
+            .post('/add-container')
+            .set('Authorization', `Bearer ${token}`)
+            .attach('picture', tempImagePath)
+            .field('name', 'Another Test Container')
+            .field('description', 'Another test description')
+            .field('location_id', locationId);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.message).toBe('Container added successfully');
+
+        const [rows] = await db.execute('SELECT * FROM containers WHERE name = ?', ['Another Test Container']);
+        expect(rows.length).toBe(1);
+        expect(rows[0].description).toBe('Another test description');
+        expect(rows[0].picture_path).not.toBeNull();
+        expect(rows[0].user_id).toBe(userId);
+        expect(rows[0].location_id).toBe(locationId);
+        expect(fs.existsSync(path.join(__dirname, rows[0].picture_path))).toBe(true);
+
+        // Clean up the uploaded picture
+        if (fs.existsSync(path.join(__dirname, rows[0].picture_path))) {
+            fs.unlinkSync(path.join(__dirname, rows[0].picture_path));
+        }
+    });
+
+    it('should return 400 if container name or location is missing', async () => {
+        const response = await request(app)
+            .post('/add-container')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                description: 'Description without name or location'
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(response.body.message).toBe('Container name and location are required');
     });
 });
