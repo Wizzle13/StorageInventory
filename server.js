@@ -239,6 +239,18 @@ async function main() {
         }
     });
 
+    // Endpoint for getting all items for a user
+    app.get('/get-items', authenticateToken, async (req, res) => {
+        try {
+            const userId = req.user.id;
+            const [results] = await db.execute('SELECT * FROM items WHERE user_id = ?', [userId]);
+            res.json({ success: true, items: results });
+        } catch (err) {
+            console.error('Error fetching items:', err);
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
+    });
+
     return { app, db };
 }
 

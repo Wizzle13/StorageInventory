@@ -24,6 +24,15 @@
     <div class="dashboard-container">
         <p>Email: <span id="emailDisplay"></span></p>
         <p>This is your storage inventory dashboard.</p>
+        <div class="view-selector">
+            <label for="view">View:</label>
+            <select id="view">
+                <option value="locations">Locations</option>
+                <option value="containers">Containers</option>
+                <option value="items">Items</option>
+            </select>
+        </div>
+        <div id="grid-container" class="grid-container"></div>
     </div>
     <script src="dashboard.js"></script>
 </body>
