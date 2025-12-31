@@ -162,3 +162,18 @@ button[type="submit"]:hover {
     border-radius: 4px;
     margin-bottom: 10px;
 }
+
+.clear-filter-button {
+    background-color: #dc3545; /* Red color for clear button */
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.clear-filter-button:hover {
+    background-color: #c82333;
+}

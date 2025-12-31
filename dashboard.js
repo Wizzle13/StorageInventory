@@ -72,10 +72,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to render data in a grid
-    function renderGrid(items, type) {
+    function renderGrid(items, type, filteredByLocationId = null) {
         gridContainer.innerHTML = ''; // Clear previous content
+        
+        // Add clear filter button if a filter is active
+        if (filteredByLocationId) {
+            const clearFilterButton = document.createElement('button');
+            clearFilterButton.textContent = 'Clear Location Filter';
+            clearFilterButton.classList.add('clear-filter-button');
+            clearFilterButton.addEventListener('click', () => {
+                viewSelector.value = 'locations'; // Reset selector
+                viewSelector.disabled = false;    // Enable selector
+                fetchData('locations');           // Fetch all locations
+            });
+            gridContainer.appendChild(clearFilterButton);
+        }
+
         if (items.length === 0) {
-            gridContainer.innerHTML = `<p>No ${type} found.</p>`;
+            gridContainer.innerHTML += `<p>No ${type} found.</p>`;
             return;
         }
 
@@ -100,12 +114,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 gridItem.appendChild(description);
             }
 
+            // Add click listener for locations to view containers
+            if (type === 'locations') {
+                gridItem.style.cursor = 'pointer';
+                gridItem.addEventListener('click', () => {
+                    viewSelector.value = 'containers';
+                    viewSelector.disabled = true; // Disable selector when filtered
+                    fetchData('containers', item.id); // Pass locationId
+                });
+            }
+
             gridContainer.appendChild(gridItem);
         });
     }
 
+    // Function to fetch and display data
+    async function fetchData(type, locationId = null) {
+        try {
+            let url = `http://localhost:3000/get-${type}`;
+            if (type === 'containers' && locationId) {
+                url = `http://localhost:3000/get-containers-by-location?location_id=${locationId}`;
+            }
+
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                // Pass filteredByLocationId to renderGrid
+                renderGrid(data[type] || data.containers, type, locationId); 
+            } else {
+                console.error(`Error fetching ${type}:`, data.message);
+            }
+        } catch (error) {
+            console.error(`Error fetching ${type}:`, error);
+        }
+    }
+
     // Event listener for view selector
     viewSelector.addEventListener('change', (event) => {
+        viewSelector.disabled = false; // Enable selector on manual change
         fetchData(event.target.value);
     });
 

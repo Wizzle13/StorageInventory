@@ -220,6 +220,22 @@ async function main() {
         }
     });
 
+    // Endpoint for getting containers by location for a user
+    app.get('/get-containers-by-location', authenticateToken, async (req, res) => {
+        try {
+            const userId = req.user.id;
+            const { location_id } = req.query;
+            if (!location_id) {
+                return res.status(400).json({ success: false, message: 'Location ID is required' });
+            }
+            const [results] = await db.execute('SELECT * FROM containers WHERE user_id = ? AND location_id = ?', [userId, location_id]);
+            res.json({ success: true, containers: results });
+        } catch (err) {
+            console.error('Error fetching containers by location:', err);
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
+    });
+
     // Endpoint for adding a new item
     app.post('/add-item', authenticateToken, upload.single('picture'), async (req, res) => {
         try {

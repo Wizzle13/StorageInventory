@@ -7,6 +7,20 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <header class="dashboard-header">
+        <div class="welcome-message">
+            <h2>Welcome!</h2>
+        </div>
+        <nav class="hamburger-menu">
+            <button class="menu-toggle" aria-label="Open menu">☰</button>
+            <ul class="menu-items">
+                <li><a href="add-location.html">Location</a></li>
+                <li><a href="add-container.html">Container</a></li>
+                <li><a href="add-item.html">Item</a></li>
+                <li><button id="logoutButton">Logout</button></li>
+            </ul>
+        </nav>
+    </header>
     <div class="login-container">
         <h2>Login</h2>
         <form id="loginForm">
@@ -23,5 +37,6 @@
         <p>Don't have an account? <a href="create-user.html">Create one</a></p>
     </div>
     <script src="script.js"></script>
+    <script src="menu.js"></script>
 </body>
 </html>

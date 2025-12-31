@@ -332,6 +332,27 @@ describe('Container API', () => {
         expect(response.body.success).toBe(false);
         expect(response.body.message).toBe('Container name and location are required');
     });
+
+    it('should retrieve containers by location for the user', async () => {
+        // Add a container first to ensure there's data for the location
+        await request(app)
+            .post('/add-container')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ name: 'Container by Location', description: 'Description', location_id: locationId });
+        
+        const response = await request(app)
+            .get(`/get-containers-by-location?location_id=${locationId}`)
+            .set('Authorization', `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.containers).toBeInstanceOf(Array);
+        expect(response.body.containers.length).toBeGreaterThanOrEqual(1);
+        expect(response.body.containers.some(cont => cont.name === 'Container by Location')).toBe(true);
+
+        // Clean up
+        await db.execute('DELETE FROM containers WHERE name = ?', ['Container by Location']);
+    });
 });
 
 describe('Item API', () => {

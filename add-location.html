@@ -7,6 +7,20 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <header class="dashboard-header">
+        <div class="welcome-message">
+            <h2>Welcome, <span id="nameDisplay">Name</span>!</h2>
+        </div>
+        <nav class="hamburger-menu">
+            <button class="menu-toggle" aria-label="Open menu">☰</button>
+            <ul class="menu-items">
+                <li><a href="add-location.html">Location</a></li>
+                <li><a href="add-container.html">Container</a></li>
+                <li><a href="add-item.html">Item</a></li>
+                <li><button id="logoutButton">Logout</button></li>
+            </ul>
+        </nav>
+    </header>
     <div class="dashboard-container">
         <h2>Add a New Location</h2>
         <form id="addLocationForm">
@@ -41,5 +55,6 @@
         </table>
     </div>
     <script src="add-location.js"></script>
+    <script src="menu.js"></script>
 </body>
 </html>
