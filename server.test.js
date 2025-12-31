@@ -18,6 +18,7 @@ beforeAll(async () => {
     app = server.app;
     db = server.db;
     // Drop tables to ensure fresh schema
+    await db.execute('DROP TABLE IF EXISTS items');
     await db.execute('DROP TABLE IF EXISTS containers');
     await db.execute('DROP TABLE IF EXISTS locations');
     await db.execute('DROP TABLE IF EXISTS users');
@@ -332,3 +333,108 @@ describe('Container API', () => {
         expect(response.body.message).toBe('Container name and location are required');
     });
 });
+
+describe('Item API', () => {
+    let token;
+    let userId;
+    let locationId;
+    let containerId;
+
+    beforeAll(async () => {
+        // Create user and login to get token
+        const testUser3 = { name: 'Test User 3', email: 'test3@example.com', username: 'testuser3', password: 'password123' };
+        await request(app).post('/create-user').send(testUser3);
+        const response = await request(app)
+            .post('/login')
+            .send({
+                username: testUser3.username,
+                password: testUser3.password
+            });
+        token = response.body.token;
+        const [userRows] = await db.execute('SELECT id FROM users WHERE username = ?', [testUser3.username]);
+        userId = userRows[0].id;
+
+        // Create a location
+        await request(app)
+            .post('/add-location')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ name: 'Test Location for Items', description: 'A test description' });
+        const [locationRows] = await db.execute('SELECT id FROM locations WHERE name = ?', ['Test Location for Items']);
+        locationId = locationRows[0].id;
+
+        // Create a container
+        await request(app)
+            .post('/add-container')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ name: 'Test Container for Items', description: 'A test description', location_id: locationId });
+        const [containerRows] = await db.execute('SELECT id FROM containers WHERE name = ?', ['Test Container for Items']);
+        containerId = containerRows[0].id;
+    });
+
+    afterAll(async () => {
+        await db.execute('DELETE FROM users WHERE username = ?', ['testuser3']);
+    });
+
+    it('should add a new item without a picture successfully', async () => {
+        const response = await request(app)
+            .post('/add-item')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                name: 'Test Item',
+                description: 'A test description',
+                container_id: containerId
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.message).toBe('Item added successfully');
+
+        const [rows] = await db.execute('SELECT * FROM items WHERE name = ?', ['Test Item']);
+        expect(rows.length).toBe(1);
+        expect(rows[0].description).toBe('A test description');
+        expect(rows[0].picture_path).toBeNull();
+        expect(rows[0].user_id).toBe(userId);
+        expect(rows[0].container_id).toBe(containerId);
+    });
+
+    it('should add a new item with a picture successfully', async () => {
+        const response = await request(app)
+            .post('/add-item')
+            .set('Authorization', `Bearer ${token}`)
+            .attach('picture', tempImagePath)
+            .field('name', 'Another Test Item')
+            .field('description', 'Another test description')
+            .field('container_id', containerId);
+
+        expect(response.status).toBe(200);
+        expect(response.body.success).toBe(true);
+        expect(response.body.message).toBe('Item added successfully');
+
+        const [rows] = await db.execute('SELECT * FROM items WHERE name = ?', ['Another Test Item']);
+        expect(rows.length).toBe(1);
+        expect(rows[0].description).toBe('Another test description');
+        expect(rows[0].picture_path).not.toBeNull();
+        expect(rows[0].user_id).toBe(userId);
+        expect(rows[0].container_id).toBe(containerId);
+        expect(fs.existsSync(path.join(__dirname, rows[0].picture_path))).toBe(true);
+
+        // Clean up the uploaded picture
+        if (fs.existsSync(path.join(__dirname, rows[0].picture_path))) {
+            fs.unlinkSync(path.join(__dirname, rows[0].picture_path));
+        }
+    });
+
+    it('should return 400 if item name or container is missing', async () => {
+        const response = await request(app)
+            .post('/add-item')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                description: 'Description without name or container'
+            });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(response.body.message).toBe('Item name and container are required');
+    });
+});
+

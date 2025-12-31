@@ -82,6 +82,21 @@ async function main() {
         )
     `);
 
+    // Create items table if it doesn't exist
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            description TEXT,
+            picture_path VARCHAR(255),
+            container_id INT,
+            user_id INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (container_id) REFERENCES containers(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    `);
+
     // Endpoint for user login
     app.post('/login', async (req, res) => {
         try {
@@ -189,6 +204,37 @@ async function main() {
             res.json({ success: true, message: 'Container added successfully' });
         } catch (err) {
             console.error('Error adding container:', err);
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
+    });
+
+    // Endpoint for getting all containers for a user
+    app.get('/get-containers', authenticateToken, async (req, res) => {
+        try {
+            const userId = req.user.id;
+            const [results] = await db.execute('SELECT * FROM containers WHERE user_id = ?', [userId]);
+            res.json({ success: true, containers: results });
+        } catch (err) {
+            console.error('Error fetching containers:', err);
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
+    });
+
+    // Endpoint for adding a new item
+    app.post('/add-item', authenticateToken, upload.single('picture'), async (req, res) => {
+        try {
+            const { name, description, container_id } = req.body;
+            const picture_path = req.file ? req.file.path : null;
+            const userId = req.user.id;
+
+            if (!name || !container_id) {
+                return res.status(400).json({ success: false, message: 'Item name and container are required' });
+            }
+
+            await db.execute('INSERT INTO items (name, description, picture_path, container_id, user_id) VALUES (?, ?, ?, ?, ?)', [name, description, picture_path, container_id, userId]);
+            res.json({ success: true, message: 'Item added successfully' });
+        } catch (err) {
+            console.error('Error adding item:', err);
             res.status(500).json({ success: false, message: 'Internal server error' });
         }
     });

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Item</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Add Item</h1>
+        <form id="add-item-form">
+            <div class="form-group">
+                <label for="container">Container</label>
+                <select id="container" name="container" class="uniform-width" required></select>
+            </div>
+            <div class="form-group">
+                <label for="name">Item Name</label>
+                <input type="text" id="name" name="name" class="uniform-width" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" class="uniform-width"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="picture">Photo</label>
+                <input type="file" id="picture" name="picture" class="uniform-width">
+            </div>
+            <button type="submit">Add Item</button>
+        </form>
+    </div>
+    <script src="add-item.js"></script>
+</body>
+</html>
